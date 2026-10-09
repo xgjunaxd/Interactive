@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Junaid — Web Developer &amp; Creator</title>
+<meta name="description" content="Interactive portfolio of Junaid, web developer & creator.">
+<meta name="theme-color" content="#f8f2ea">
+
+<!-- Font: Sora (falls back to a safe system stack if offline) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================================
+   COLORS & BASICS  (change the palette here)
+   ===================================================================== */
+:root{
+  --cream:   #f8f2ea;   /* page background        */
+  --cream-2: #fffdf8;   /* cards & bubbles        */
+  --ink:     #33232a;   /* main text (warm charcoal) */
+  --maroon:  #7c2b3a;   /* accent (matches his headset) */
+  --rose:    #c98d97;   /* dusty rose             */
+  --muted:   #8b6f77;   /* soft secondary text    */
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+html, body{ overflow-x:hidden; }           /* no horizontal scrolling, ever */
+body{
+  font-family:'Sora','Avenir Next','Segoe UI',sans-serif;
+  background:
+    radial-gradient(90% 70% at 50% 30%, #fdf9f3 0%, var(--cream) 60%);
+  color:var(--ink);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* soft paper grain over the whole page */
+body::before{
+  content:""; position:fixed; inset:0; z-index:120; pointer-events:none;
+  opacity:.05; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+}
+/* light maroon / dusty rose wash toward the edges of the page */
+body::after{
+  content:""; position:fixed; inset:0; z-index:110; pointer-events:none;
+  background:radial-gradient(115% 95% at 50% 40%,
+    rgba(0,0,0,0) 55%, rgba(124,43,58,.07) 78%, rgba(201,141,151,.17) 100%);
+}
+
+/* =====================================================================
+   TOP NAV
+   ===================================================================== */
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:90;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:22px clamp(20px,4vw,44px);
+  opacity:0; transform:translateY(-8px);
+  transition:opacity .8s ease .2s, transform .8s ease .2s,
+             background .3s ease, box-shadow .3s ease;
+}
+body.ready .nav{ opacity:1; transform:none; }
+.nav.scrolled{
+  background:rgba(248,242,234,.85);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 1px 0 rgba(124,43,58,.12);
+}
+.logo{ font-weight:700; font-size:1.3rem; letter-spacing:-.02em; color:var(--ink); text-decoration:none; }
+.logo b{ color:var(--maroon); font-weight:700; }
+.nav-link{
+  font-size:.78rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--ink); text-decoration:none; position:relative; padding:4px 2px;
+}
+.nav-link::after{
+  content:""; position:absolute; left:0; bottom:0; height:2px; width:100%;
+  background:var(--maroon); transform:scaleX(0); transform-origin:left; transition:transform .3s ease;
+}
+.nav-link:hover::after{ transform:scaleX(1); }
+
+/* =====================================================================
+   HERO
+   ===================================================================== */
+.hero{
+  position:relative; min-height:100vh; min-height:100svh;
+  display:flex; align-items:stretch; overflow:hidden;
+  touch-action:pan-y;                        /* swipes stay ours, scrolling stays vertical */
+}
+.hero-inner{
+  position:relative; z-index:2; width:100%; max-width:1500px; margin:0 auto;
+  display:grid; grid-template-columns:minmax(280px,44fr) 56fr;
+  align-items:center; gap:clamp(1rem,4vw,4rem);
+  /* room at the top for the nav, at the bottom for the scroll cue */
+  padding:clamp(90px,12vh,130px) clamp(20px,6vw,90px) clamp(90px,14vh,140px);
+}
+
+/* --- left copy --- */
+.hero-copy h1{
+  font-size:clamp(2.6rem, 5.2vw + .4rem, 4.9rem);
+  font-weight:700; letter-spacing:-.035em; line-height:1.03; max-width:480px;
+}
+.hero-copy h1 .accent{ color:var(--maroon); }
+.subline{
+  margin-top:18px; display:flex; align-items:center; gap:14px;
+  color:var(--maroon); font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+  font-size:clamp(.8rem,1.4vw,1rem);
+}
+.rule{ width:34px; height:2px; background:var(--rose); border-radius:2px; flex:none; }
+.hint{
+  margin-top:26px; color:var(--muted); font-size:.92rem;
+  display:inline-flex; align-items:center; gap:12px;
+}
+.hint-arrow{ color:var(--maroon); flex:none; animation:nudge 1.7s ease-in-out infinite; }
+@keyframes nudge{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(8px);} }
+
+/* staged entrance for the copy */
+.reveal{ opacity:0; transform:translateY(22px); }
+body.ready .reveal{
+  opacity:1; transform:none;
+  transition:opacity .9s ease, transform .9s cubic-bezier(.2,.7,.3,1);
+}
+body.ready .r1{ transition-delay:.15s; }
+body.ready .r2{ transition-delay:.3s; }
+body.ready .r3{ transition-delay:.45s; }
+
+/* --- the character stage --- */
+.stage{
+  position:relative; display:flex; justify-content:center; align-items:center;
+  cursor:pointer; outline:none; user-select:none; -webkit-user-select:none;
+  touch-action:manipulation;
+}
+.stage:focus-visible .actor-hold{
+  outline:2px dashed rgba(124,43,58,.5); outline-offset:14px; border-radius:26px;
+}
+/* soft white glow behind him */
+.glow{
+  position:absolute; left:50%; top:52%; transform:translate(-50%,-50%);
+  width:132%; height:88%; z-index:0; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(255,255,255,.9), rgba(255,255,255,0) 72%);
+  filter:blur(14px);
+  opacity:0; transition:opacity 1.6s ease .4s;
+}
+body.ready .glow{ opacity:1; }
+
+.actor-hold{
+  position:relative; z-index:1; perspective:900px;   /* 3D tilt space */
+  opacity:0; transform:translateY(70px) scale(.97);  /* rises in on load */
+}
+body.ready .actor-hold{
+  opacity:1; transform:none;
+  transition:opacity 1s ease .1s, transform 1.2s cubic-bezier(.2,.75,.25,1) .1s;
+}
+.actor-tilt{ position:relative; transform-style:preserve-3d; will-change:transform; }
+#actor{
+  display:block; width:auto; height:auto;
+  max-width:clamp(300px,46vw,660px);
+  max-height:64vh;
+}
+/* compatibility green screen (only used when the browser blocks pixel access) */
+#actor.css-key{ filter:url(#chromacss); }
+
+/* soft shadow under him so he looks placed in the scene */
+.actor-shadow{
+  position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+  width:62%; height:30px; opacity:.5; pointer-events:none;
+  background:radial-gradient(50% 50% at 50% 50%, rgba(64,32,40,.34), rgba(64,32,40,0) 70%);
+  filter:blur(7px);
+}
+
+/* --- speech bubble --- */
+.bubble{
+  position:absolute; top:-4%; left:-16%; max-width:240px; z-index:5;
+  background:var(--cream-2); border:1px solid rgba(124,43,58,.2);
+  border-radius:16px 16px 16px 4px; padding:10px 16px;
+  font-size:.92rem; font-weight:600; color:var(--ink);
+  box-shadow:0 10px 26px rgba(124,43,58,.12);
+  opacity:0; transform:translateY(8px) scale(.94); transform-origin:bottom right;
+  transition:opacity .28s ease, transform .28s cubic-bezier(.3,1.4,.5,1);
+  pointer-events:none;
+}
+.bubble.on{ opacity:1; transform:none; }
+.bubble::after{  /* little tail */
+  content:""; position:absolute; bottom:-7px; right:26px; width:13px; height:13px;
+  background:var(--cream-2); transform:rotate(45deg);
+  border-right:1px solid rgba(124,43,58,.2); border-bottom:1px solid rgba(124,43,58,.2);
+}
+.bubble-text{ display:inline-block; }
+.bubble.pop .bubble-text{ animation:bpop .32s cubic-bezier(.3,1.4,.5,1); }
+@keyframes bpop{ 0%{ transform:scale(.9); opacity:.3; } }
+
+/* small down-chevron that appears while he points at the portfolio */
+.point-cue{
+  position:absolute; left:50%; bottom:-40px; z-index:5; color:var(--maroon);
+  opacity:0; transition:opacity .4s ease; pointer-events:none;
+  animation:bobDown 1.3s ease-in-out infinite;
+}
+.point-cue.on{ opacity:.85; }
+@keyframes bobDown{ 0%,100%{ transform:translate(-50%,0);} 50%{ transform:translate(-50%,7px);} }
+
+/* --- floating shapes --- */
+.shapes{ position:absolute; inset:0; pointer-events:none; will-change:transform; }
+.shapes-back{ z-index:1; }
+.shapes-front{ z-index:3; }
+.shape{ position:absolute; }
+.shape-sphere{
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,
+    rgba(255,255,255,.95), rgba(255,255,255,.28) 52%, rgba(255,255,255,0) 72%);
+  border:1px solid rgba(255,255,255,.65);
+  box-shadow:inset -8px -10px 18px rgba(124,43,58,.08), 0 10px 24px rgba(124,43,58,.07);
+}
+.shape-ring{ border-radius:50%; border:1.5px solid rgba(124,43,58,.18); }
+.shape-symbol{ font-weight:300; color:rgba(124,43,58,.22); line-height:1; user-select:none; }
+.shapes-front .shape{ filter:blur(1.5px); opacity:.75; }
+.shapes-front .shape-symbol{ color:rgba(124,43,58,.3); }
+.drifty{ animation:drift var(--dur,9s) ease-in-out var(--del,0s) infinite alternate; }
+@keyframes drift{
+  from{ transform:translate3d(0,-10px,0) rotate(var(--rot,-4deg)); }
+  to  { transform:translate3d(0,12px,0)  rotate(calc(var(--rot,-4deg) * -1)); }
+}
+
+/* --- scroll cue --- */
+.scroll-cue{
+  position:absolute; left:50%; bottom:22px; transform:translateX(-50%); z-index:6;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  text-decoration:none; color:var(--muted);
+  font-size:.72rem; font-weight:600; letter-spacing:.24em; text-transform:uppercase;
+  transition:color .3s ease;
+}
+.scroll-cue:hover{ color:var(--maroon); }
+.cue-track{ width:1px; height:44px; background:rgba(124,43,58,.22); position:relative; overflow:hidden; }
+.cue-dot{
+  position:absolute; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; border-radius:50%; background:var(--maroon);
+  animation:fall 1.8s ease-in-out infinite;
+}
+@keyframes fall{
+  0%  { top:-6px;  opacity:0; }
+  15% { opacity:1; }
+  85% { opacity:1; }
+  100%{ top:44px;  opacity:0; }
+}
+
+/* =====================================================================
+   PROJECTS
+   ===================================================================== */
+.projects{
+  position:relative; z-index:2; max-width:1500px; margin:0 auto;
+  padding:clamp(80px,10vw,130px) clamp(20px,6vw,90px);
+}
+#projects{ scroll-margin-top:70px; }
+.eyebrow{
+  color:var(--maroon); font-size:.75rem; font-weight:600;
+  letter-spacing:.26em; text-transform:uppercase;
+}
+.projects h2{ font-size:clamp(2rem,4vw,3.1rem); letter-spacing:-.03em; margin-top:12px; }
+.projects-sub{ margin-top:14px; color:var(--muted); max-width:48ch; }
+
+.grid{
+  margin-top:clamp(30px,4vw,54px);
+  display:grid; gap:18px;
+  grid-template-columns:repeat(auto-fill, minmax(min(100%,290px), 1fr));
+}
+.card{
+  position:relative; display:flex; flex-direction:column; gap:10px; min-height:205px;
+  background:var(--cream-2); border:1px solid rgba(124,43,58,.14);
+  border-radius:18px; padding:26px 24px 22px;
+  box-shadow:0 1px 0 rgba(124,43,58,.05);
+  opacity:0; transform:translateY(22px);
+  transition:transform .18s ease-out, opacity .7s ease,
+             box-shadow .35s ease, border-color .3s ease;
+}
+.card.in{ opacity:1; transform:none; }
+.card:hover{ border-color:rgba(124,43,58,.3); box-shadow:0 24px 44px -18px rgba(124,43,58,.28); }
+.card-index{
+  position:absolute; top:16px; right:18px;
+  font-weight:300; font-size:1.9rem; letter-spacing:-.04em; color:rgba(124,43,58,.15);
+}
+.card h3{ font-size:1.22rem; letter-spacing:-.015em; padding-right:44px; }
+.card p{ color:var(--muted); font-size:.95rem; line-height:1.55; }
+.card-foot{
+  margin-top:auto; display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding-top:14px;
+}
+.tag{
+  font-size:.68rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--maroon); background:rgba(124,43,58,.07);
+  border:1px solid rgba(124,43,58,.16); padding:5px 11px; border-radius:999px;
+}
+.card-link{
+  display:inline-flex; align-items:center; gap:7px;
+  font-size:.8rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--maroon); text-decoration:none;
+}
+.card-link:hover{ text-decoration:underline; }
+
+/* =====================================================================
+   FOOTER / NOTICES / VIDEO STASH
+   ===================================================================== */
+.footer{ padding:40px 20px 46px; text-align:center; color:var(--muted); font-size:.85rem; }
+.fline{ width:44px; height:2px; background:var(--rose); margin:0 auto 18px; border-radius:2px; }
+
+.notes{ position:fixed; left:16px; bottom:16px; z-index:300; max-width:340px; display:grid; gap:10px; }
+.notice-card{
+  position:relative; background:var(--cream-2);
+  border:1px solid rgba(124,43,58,.3); border-left:4px solid var(--maroon);
+  border-radius:12px; padding:14px 40px 14px 16px;
+  box-shadow:0 18px 40px -12px rgba(124,43,58,.3); font-size:.88rem;
+}
+.notice-card strong{
+  display:block; margin-bottom:6px; color:var(--maroon);
+  font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
+}
+.notice-card p{ line-height:1.5; }
+.notice-x{
+  position:absolute; top:8px; right:8px; width:26px; height:26px;
+  border:0; background:none; color:var(--muted); font-size:1.05rem;
+  cursor:pointer; border-radius:6px; line-height:1;
+}
+.notice-x:hover{ background:rgba(124,43,58,.08); color:var(--ink); }
+
+/* videos live here (kept 2px "rendered" so frames decode reliably) */
+.stash{
+  position:fixed; left:0; bottom:0; width:2px; height:2px; overflow:hidden;
+  opacity:.02; pointer-events:none; z-index:0;
+}
+.stash video{ width:2px; height:2px; }
+
+.svg-defs{ position:absolute; width:0; height:0; overflow:hidden; }
+
+/* =====================================================================
+   SMALL SCREENS / TOUCH
+   ===================================================================== */
+@media (max-width:860px){
+  .hero-inner{
+    grid-template-columns:1fr; text-align:center; gap:.6rem;
+    padding:84px 20px 120px;
+  }
+  .hero-copy{ display:flex; flex-direction:column; align-items:center; }
+  .subline{ justify-content:center; }
+  .hint{ margin-top:16px; }
+  #actor{ max-width:min(92vw,520px); max-height:48vh; }
+  .bubble{ left:0; top:-13%; max-width:210px; }
+  .scroll-cue{ bottom:14px; }
+  .notes{ left:12px; right:12px; max-width:none; }
+}
+@media (hover:none){ .hint-arrow{ display:none; } }
+
+/* respect reduced-motion preferences */
+@media (prefers-reduced-motion:reduce){
+  html{ scroll-behavior:auto; }
+  *, *::before, *::after{ animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- SVG defs: chroma-key filter used only in "compatibility mode" -->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <filter id="chromacss" color-interpolation-filters="sRGB">
+    <!-- alpha = 1 - 1.4 * greenness  (turns the green screen transparent) -->
+    <feColorMatrix type="matrix"
+      values="1 0 0 0 0
+              0 1 0 0 0
+              0 0 1 0 0
+              0.7 -1.4 0.7 0 1"/>
+    <!-- crude green-spill cleanup -->
+    <feColorMatrix type="matrix"
+      values="1 0 0 0 0
+              0 0.8 0.2 0 0
+              0 0 1 0 0
+              0 0 0 1 0"/>
+  </filter>
+</svg>
+
+<!-- minimal top navigation -->
+<nav class="nav" id="nav">
+  <a class="logo" href="#top">Junaid<b>.</b></a>
+  <a class="nav-link" href="#projects">Projects</a>
+</nav>
+
+<!-- ======================= HERO ======================= -->
+<section class="hero" id="hero">
+  <div class="shapes shapes-back"  id="shapesBack"  aria-hidden="true"></div>
+
+  <div class="hero-inner" id="top">
+    <div class="hero-copy">
+      <h1 class="reveal r1">I&rsquo;m Junaid<span class="accent">.</span></h1>
+      <p class="subline reveal r2"><span class="rule"></span>Web Developer &amp; Creator</p>
+      <p class="hint reveal r3">
+        <span id="hintText">Move cursor to call me!</span>
+        <svg class="hint-arrow" width="44" height="18" viewBox="0 0 44 18" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 9 C 13 2.5, 27 2.5, 36 7.5"/>
+          <path d="M30 2.8 36.5 7.8 30.8 12.6"/>
+        </svg>
+      </p>
+    </div>
+
+    <div class="stage" id="stage" role="button" tabindex="0" aria-label="Say hello to Junaid">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="actor-hold">
+        <div class="actor-tilt" id="actorTilt">
+          <canvas id="actor" width="960" height="540" role="img"
+                  aria-label="Junaid, a friendly 3D character working on his laptop"></canvas>
+          <div class="bubble" id="bubble" aria-live="polite">
+            <span class="bubble-text" id="bubbleText"></span>
+          </div>
+        </div>
+        <div class="actor-shadow" id="actorShadow" aria-hidden="true"></div>
+      </div>
+      <div class="point-cue" id="pointCue" aria-hidden="true">
+        <svg width="22" height="13" viewBox="0 0 22 13" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 2l9 8 9-8"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="shapes shapes-front" id="shapesFront" aria-hidden="true"></div>
+
+  <a class="scroll-cue" href="#projects">
+    <span>Explore my work</span>
+    <span class="cue-track"><span class="cue-dot"></span></span>
+  </a>
+</section>
+
+<!-- ======================= PROJECTS ======================= -->
+<section class="projects" id="projects">
+  <p class="eyebrow">Selected work</p>
+  <h2>Things I&rsquo;ve built</h2>
+  <p class="projects-sub">A few projects I&rsquo;m proud of &mdash; hover a card and it leans in to say hello.</p>
+  <div class="grid" id="projectGrid"></div>
+</section>
+
+<footer class="footer">
+  <div class="fline"></div>
+  <p>&copy; 2025 Junaid &mdash; one HTML file, one green screen, and a lot of care.</p>
+</footer>
+
+<!-- friendly notices (missing files etc.) -->
+<div class="notes" id="notes" aria-live="polite"></div>
+
+<!-- preloaded videos are parked here -->
+<div class="stash" id="stash" aria-hidden="true"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* =====================================================================
+   EASY-TO-EDIT SETTINGS — change things here, the rest adapts
+   ===================================================================== */
+
+/* Media files — keep these in the SAME folder as index.html */
+const FILES = {
+  idle:   'character.jpg',  // still image (working pose)
+  left:   'left.mp4',       // he looks left
+  right:  'right.mp4',      // he looks right
+  center: 'center.mp4'      // he notices you, waves, points down
+};
+
+/* Chroma key (green screen) tuning — safe ranges in comments */
+const GREEN_SENSITIVITY = 36;   // 10..120  higher = removes more green
+const EDGE_SOFTNESS     = 30;   // 1..80    higher = softer edges
+const DESPILL           = 0.85; // 0..1     removes green fringe on the character
+
+/* Speech bubbles — "at" is seconds into each video ("text: ''" hides it) */
+const BUBBLE_LINES = {
+  left:   [ { at:0.7, text:'Anyone here on the left?'  }, { at:6.2, text:'' } ],
+  right:  [ { at:0.7, text:'Anyone here on the right?' }, { at:6.2, text:'' } ],
+  center: [
+    { at:0.8, text:'Hey, it\u2019s you!' },
+    { at:2.4, text:'Hiiii!' },
+    { at:5.2, text:'Check out the portfolio', cue:true }  // cue:true shows the little arrow
+  ]
+};
+
+/* Floating shapes — add or remove freely (positions are % of the hero) */
+const SHAPES = [
+  { layer:'back',  type:'sphere', x:70, y:16, size:96, d:2 },
+  { layer:'back',  type:'sphere', x:8,  y:14, size:44, d:5 },
+  { layer:'back',  type:'sphere', x:56, y:86, size:26, d:8, o:.8 },
+  { layer:'back',  type:'ring',   x:80, y:60, w:150, h:150, d:3, rot:-8 },
+  { layer:'back',  type:'ring',   x:20, y:34, w:70,  h:70,  d:6, rot:10, o:.7 },
+  { layer:'back',  type:'symbol', x:89, y:30, char:'<', size:42, d:1 },
+  { layer:'back',  type:'symbol', x:58, y:8,  char:'/', size:30, d:4 },
+  { layer:'back',  type:'symbol', x:11, y:72, char:'{', size:48, d:7 },
+  { layer:'back',  type:'symbol', x:42, y:84, char:'}', size:34, d:2 },
+  { layer:'back',  type:'symbol', x:30, y:8,  char:'>', size:30, d:9 },
+  { layer:'front', type:'sphere', x:92, y:28, size:24, d:3 },
+  { layer:'front', type:'symbol', x:5,  y:46, char:'>', size:24, d:6 },
+  { layer:'front', type:'symbol', x:15, y:84, char:'}', size:20, d:8 },
+  { layer:'front', type:'ring',   x:76, y:86, w:46,  h:46,  d:5, rot:14 }
+];
+
+/* Projects — name, one-line text, tag, link (put your real URLs in "link") */
+const PROJECTS = [
+  { name:'CodeQuest',            text:'Gamified HTML/CSS/JS learning platform',      tag:'Learn to code', link:'#' },
+  { name:'Waraqah',              text:'Faceless Islamic content project on Instagram', tag:'Content',     link:'#' },
+  { name:'Birla Opus Dealership',text:'Client website with booking flow',            tag:'Client work',  link:'#' },
+  { name:'Zaid',                 text:'3D animated Islamic short series',             tag:'3D animation', link:'#' },
+  { name:'AI Stylist',           text:'Gemini outfit generator with virtual try-on',  tag:'AI',           link:'#' },
+  { name:'Kestrel',              text:'Scroll-driven cinematic WebGL website',        tag:'WebGL',        link:'#' }
+];
+
+/* =====================================================================
+   INTERNALS — you usually don't need to touch anything below
+   ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const REDUCED       = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOUCH_PRIMARY = matchMedia('(hover: none) and (pointer: coarse)').matches;
+const NARROW        = matchMedia('(max-width: 700px)').matches;
+
+const PROC_W     = NARROW ? 560 : 960;   // chroma-key processing width (small = fast)
+const PROC_H_MAX = 960;
+const FADE_MS    = REDUCED ? 180 : 420;  // cross-fade length
+
+/* --- DOM references --- */
+const vc = $('#actor'), vctx = vc.getContext('2d');
+const stage = $('#stage'), hero = $('#hero'), nav = $('#nav');
+const actorTilt = $('#actorTilt'), actorShadow = $('#actorShadow');
+const bubble = $('#bubble'), bubbleTextEl = $('#bubbleText'), pointCue = $('#pointCue');
+const shapesBack = $('#shapesBack'), shapesFront = $('#shapesFront');
+const stash = $('#stash'), notes = $('#notes'), grid = $('#projectGrid');
+
+/* --- friendly notices --- */
+const missing = new Set();
+let missingCard = null;
+function notifyCard(title, body){
+  const card = document.createElement('div');
+  card.className = 'notice-card';
+  card.innerHTML = '<strong></strong><p></p>' +
+    '<button class="notice-x" type="button" aria-label="Dismiss">\u00d7</button>';
+  card.querySelector('strong').textContent = title;
+  card.querySelector('p').textContent = body;
+  card.querySelector('.notice-x').addEventListener('click', () => card.remove());
+  notes.appendChild(card);
+  return card;
+}
+function reportMissing(name){
+  if (missing.has(name)) return;
+  missing.add(name);
+  const list = Array.from(missing).join(', ');
+  if (!missingCard) missingCard = notifyCard('Missing files', list);
+  missingCard.querySelector('p').textContent = list +
+    ' \u2014 please keep ' + (missing.size > 1 ? 'these files' : 'this file') +
+    ' in the same folder as index.html, then refresh the page.';
+}
+
+/* --- media elements (preloaded, muted, inline) --- */
+function makeVideo(key){
+  const v = document.createElement('video');
+  v.src = FILES[key];
+  v.muted = true; v.setAttribute('muted', '');
+  v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+  v.preload = 'auto';
+  v.addEventListener('error', () => reportMissing(FILES[key]), { once:true });
+  stash.appendChild(v);
+  v.load();
+  return v;
+}
+const vids = {
+  left:  makeVideo('left'),
+  right: makeVideo('right'),
+  center:makeVideo('center')
+};
+const idleImg = new Image();
+idleImg.addEventListener('error', () => reportMissing(FILES.idle));
+idleImg.src = FILES.idle;
+const mediaFor = kind => kind === 'idle' ? idleImg : vids[kind];
+
+/* --- chroma-key core --- */
+let TAINTED = false; // true when the browser blocks pixel access (file:// in Chrome)
+
+function keyPixels(d){
+  const S = GREEN_SENSITIVITY, LO = S - EDGE_SOFTNESS;
+  const INV = 255 / EDGE_SOFTNESS, DSP = DESPILL;
+  for (let i = 0; i < d.length; i += 4){
+    if (d[i + 3] === 0) continue;                 // already transparent
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const gr = g - (r > b ? r : b);               // "greenness" of the pixel
+    if (gr >= S){ d[i + 3] = 0; continue; }       // pure green -> gone
+    if (gr > LO) d[i + 3] = (S - gr) * INV;       // soft edge band
+    if (gr > 0){                                  // de-spill kept pixels
+      const cut = gr * DSP;
+      d[i + 1] = g - cut;
+      d[i]     = r + cut * 0.22;                  // a little warmth back
+      d[i + 2] = b + cut * 0.22;
+    }
+  }
+}
+
+/* draw a media frame into a layer canvas, keyed (returns ImageData or null) */
+function drawAndKey(L, media){
+  const vw = media.videoWidth || media.naturalWidth || 0;
+  const vh = media.videoHeight || media.naturalHeight || 0;
+  if (!vw || !vh) return null;
+  let w = PROC_W, h = Math.round(PROC_W * vh / vw) || 1;
+  if (h > PROC_H_MAX){ h = PROC_H_MAX; w = Math.round(PROC_H_MAX * vw / vh) || 1; }
+  if (L.canvas.width !== w || L.canvas.height !== h){ L.canvas.width = w; L.canvas.height = h; }
+  L.ctx.drawImage(media, 0, 0, w, h);
+  if (TAINTED) return null;                       // compat mode: CSS filter does the keying
+  const id = L.ctx.getImageData(0, 0, w, h);
+  keyPixels(id.data);
+  L.ctx.putImageData(id, 0, 0);
+  return id;
+}
+
+/* --- two compositor layers + snapshot cross-fade --- */
+const layers = [0, 1].map(() => {
+  const c = document.createElement('canvas');
+  return {
+    canvas:c, ctx:c.getContext('2d', { willReadFrequently:true }),
+    media:null, kind:'idle', full:false, keyed:false,
+    waitingFrame:false, lastKeyTime:-1, needsGesture:false
+  };
+});
+let front = 0, mix = 1, fadeStart = 0, targetKind = 'idle', actorReady = false;
+let CROP = { x:0, y:0, w:1, h:1 };   // auto-crop of the transparent padding
+
+function keyLayer(L){
+  const m = L.media;
+  if (!m) return;                                  // snapshot layer
+  if (m instanceof HTMLVideoElement){
+    if (m.readyState < 2) return;                  // frame not decoded yet
+    // center clip: freeze just before the end -> holds the pointing pose
+    if (L.kind === 'center' && !m.paused && isFinite(m.duration) &&
+        m.duration > 0 && m.currentTime > m.duration - 0.15) m.pause();
+    if (m.paused && L.lastKeyTime === m.currentTime) return;  // same frame already keyed
+    drawAndKey(L, m);
+    L.lastKeyTime = m.currentTime;
+    L.keyed = true; L.waitingFrame = false;
+  } else {
+    if (L.keyed) return;
+    if (!drawAndKey(L, m)) return;
+    L.keyed = true; L.waitingFrame = false;
+  }
+}
+
+function drawLayer(L, alpha){
+  if (alpha <= 0.002 || !L.canvas.width) return;
+  const s = L.canvas;
+  vctx.globalAlpha = alpha;
+  if (L.full) vctx.drawImage(s, 0, 0, vc.width, vc.height);
+  else vctx.drawImage(s,
+    CROP.x * s.width, CROP.y * s.height, CROP.w * s.width, CROP.h * s.height,
+    0, 0, vc.width, vc.height);
+  vctx.globalAlpha = 1;
+}
+
+/* switch what the character is doing — always a perfect cross-fade */
+function setTarget(kind){
+  if (!actorReady || kind === targetKind) return;
+  targetKind = kind;
+  const f = front, F = layers[f], B = layers[1 - f];
+
+  // pause the outgoing clip (its pixels are captured below)
+  const out = F.media;
+  if (out instanceof HTMLVideoElement && !out.ended) out.pause();
+
+  // freeze the current screen into the back layer -> fade source with zero jump
+  B.media = null; B.kind = 'snapshot'; B.full = true;
+  B.keyed = true; B.waitingFrame = false; B.lastKeyTime = -1; B.needsGesture = false;
+  if (B.canvas.width !== vc.width || B.canvas.height !== vc.height){
+    B.canvas.width = vc.width; B.canvas.height = vc.height;
+  }
+  B.ctx.clearRect(0, 0, vc.width, vc.height);
+  B.ctx.drawImage(vc, 0, 0);
+
+  // load the new clip into the front layer
+  F.kind = kind; F.full = false; F.keyed = false;
+  F.lastKeyTime = -1; F.needsGesture = false;
+  F.media = mediaFor(kind);
+  F.waitingFrame = F.media instanceof HTMLVideoElement;
+  if (F.waitingFrame){
+    const v = F.media;
+    try { v.currentTime = 0; } catch(e){}
+    const p = v.play();                            // start reliably, handle rejection
+    if (p && p.catch) p.catch(() => { F.needsGesture = true; });
+  }
+  mix = 0;
+  fadeStart = performance.now();
+}
+
+/* retry any blocked play() on the first real user gesture */
+window.addEventListener('pointerdown', () => {
+  layers.forEach(L => {
+    if (L.needsGesture && L.media){
+      const p = L.media.play();
+      if (p && p.catch) p.then(() => { L.needsGesture = false; }).catch(() => {});
+    }
+  });
+}, true);
+
+/* clips that end on their own go back to the working pose */
+vids.left .addEventListener('ended', () => { if (targetKind === 'left')  setTarget('idle'); });
+vids.right.addEventListener('ended', () => { if (targetKind === 'right') setTarget('idle'); });
+vids.center.addEventListener('ended', function(){
+  // safety: hold on the pointing pose, never past the last frame
+  if (targetKind === 'center' && isFinite(this.duration)){
+    try { this.currentTime = Math.max(0, this.duration - 0.2); } catch(e){}
+  }
+});
+
+/* --- speech bubbles, timed with the videos --- */
+let curText = null;
+function updateBubble(F){
+  let text = '', cue = false;
+  const sched = BUBBLE_LINES[targetKind];
+  if (sched && F.media instanceof HTMLVideoElement){
+    const t = F.media.currentTime || 0;
+    for (const s of sched) if (t >= s.at){ text = s.text; cue = !!s.cue; }
+  }
+  if (text === curText) return;
+  curText = text;
+  if (!text){ bubble.classList.remove('on'); pointCue.classList.remove('on'); return; }
+  bubbleTextEl.textContent = text;
+  bubble.classList.add('on');
+  bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+  pointCue.classList.toggle('on', cue);
+}
+
+/* --- 3D tilt, float, shadow, parallax --- */
+let mouseX = innerWidth / 2, mouseY = innerHeight * 0.4, hasMouse = false;
+let tx = 0, ty = 0;
+function updateMotion(now){
+  if (REDUCED) return;
+  // gentle sway until the mouse shows up
+  const nx = hasMouse ? (mouseX / innerWidth)  * 2 - 1 : Math.sin(now * 0.00023) * 0.3;
+  const ny = hasMouse ? (mouseY / innerHeight) * 2 - 1 : Math.cos(now * 0.00017) * 0.15;
+  tx += (nx - tx) * 0.055; ty += (ny - ty) * 0.055;
+  const bob = Math.sin(now * 0.0011) * 9;              // slow float
+  actorTilt.style.transform =
+    'translateY(' + bob.toFixed(1) + 'px) rotateY(' + (tx * 4.5).toFixed(2) +
+    'deg) rotateX(' + (-ty * 3).toFixed(2) + 'deg)';
+  const bn = (bob + 9) / 18;                            // shadow reacts to the float
+  actorShadow.style.transform = 'translateX(-50%) scaleX(' + (1.05 - bn * 0.12).toFixed(3) + ')';
+  actorShadow.style.opacity  = (0.55 - bn * 0.2).toFixed(2);
+  shapesBack.style.transform  = 'translate(' + (-tx * 24).toFixed(1) + 'px,' + (-ty * 16).toFixed(1) + 'px)';
+  shapesFront.style.transform = 'translate(' + ( tx * 36).toFixed(1) + 'px,' + ( ty * 22).toFixed(1) + 'px)';
+}
+
+/* --- desktop: three zones across the whole window --- */
+let zonesOn = !TOUCH_PRIMARY;
+let lastZone = null, pendZone = null, pendTimer = 0;
+
+function zoneOf(x){
+  const t = x / innerWidth;
+  return t < 0.33 ? 'left' : (t < 0.67 ? 'center' : 'right');
+}
+function activate(z){
+  if (z === 'left' || z === 'right' || z === 'center') setTarget(z);
+  else if (targetKind === 'center') setTarget('idle');   // leaving center -> back to work
+}
+window.addEventListener('mousemove', e => {
+  mouseX = e.clientX; mouseY = e.clientY; hasMouse = true;
+  if (!zonesOn){ if (!TOUCH_PRIMARY) zonesOn = true; else return; }
+  const z = zoneOf(mouseX);
+  if (z === pendZone) return;
+  pendZone = z;
+  clearTimeout(pendTimer);
+  pendTimer = setTimeout(() => {                 // tiny debounce at zone edges
+    if (pendZone !== lastZone){ lastZone = pendZone; activate(lastZone); }
+  }, 110);
+}, { passive:true });
+
+document.addEventListener('mouseout', e => {    // mouse left the window
+  if (!e.relatedTarget && zonesOn && targetKind === 'center'){
+    lastZone = null; pendZone = null; activate(null);
+  }
+});
+
+/* --- touch: tap him, or swipe left / right --- */
+let heroVisible = true;
+new IntersectionObserver(en => { heroVisible = en[0].isIntersecting; },
+  { threshold: 0.05 }).observe(hero);
+
+let touchStart = null;
+window.addEventListener('touchstart', e => {
+  zonesOn = false;                               // a finger means: no cursor zones
+  if (e.touches.length !== 1){ touchStart = null; return; }
+  const t = e.touches[0];
+  touchStart = { x:t.clientX, y:t.clientY, t:performance.now(), onActor:stage.contains(e.target) };
+}, { passive:true, capture:true });
+
+window.addEventListener('touchend', e => {
+  if (!touchStart || !heroVisible) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+  const dt = performance.now() - touchStart.t;
+  const onActor = touchStart.onActor;
+  touchStart = null;
+  if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.25){
+    setTarget(dx < 0 ? 'left' : 'right');        // swipe
+  } else if (onActor && Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 700){
+    setTarget('center');                          // tap on him
+  }
+}, { passive:true });
+
+/* click / keyboard also triggers the greeting */
+stage.addEventListener('click', () => setTarget('center'));
+stage.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); setTarget('center'); }
+});
+
+/* --- floating shapes --- */
+function buildShapes(){
+  SHAPES.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'shape shape-' + s.type + (REDUCED ? '' : ' drifty');
+    el.style.left = s.x + '%'; el.style.top = s.y + '%';
+    if (s.type === 'sphere'){ el.style.width = el.style.height = s.size + 'px'; }
+    if (s.type === 'ring'){ el.style.width = s.w + 'px'; el.style.height = s.h + 'px'; }
+    if (s.type === 'symbol'){ el.textContent = s.char; el.style.fontSize = s.size + 'px'; }
+    el.style.setProperty('--dur', (7 + (s.d || 0)) + 's');
+    el.style.setProperty('--del', (-(s.d || 0) * 1.7) + 's');
+    el.style.setProperty('--rot', (s.rot || -5) + 'deg');
+    if (s.o) el.style.opacity = s.o;
+    (s.layer === 'front' ? shapesFront : shapesBack).appendChild(el);
+  });
+}
+
+/* --- projects grid with a gentle 3D tilt on hover --- */
+function buildProjects(){
+  PROJECTS.forEach((p, i) => {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML =
+      '<span class="card-index">' + String(i + 1).padStart(2, '0') + '</span>' +
+      '<h3></h3><p></p>' +
+      '<div class="card-foot"><span class="tag"></span>' +
+      '<a class="card-link">Visit' +
+      '<svg viewBox="0 0 14 10" width="13" height="9" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M1 5h11M8.5 1.5 12 5 8.5 8.5"/></svg></a></div>';
+    card.querySelector('h3').textContent = p.name;
+    card.querySelector('p').textContent  = p.text;
+    card.querySelector('.tag').textContent = p.tag;
+    const a = card.querySelector('.card-link');
+    a.href = p.link;
+    if (p.link && p.link !== '#'){ a.target = '_blank'; a.rel = 'noopener'; }
+    grid.appendChild(card);
+  });
+
+  // fade cards up as they scroll into view
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+    });
+  }, { threshold: 0.15 });
+  grid.querySelectorAll('.card').forEach((c, i) => {
+    c.style.transitionDelay = (i % 3) * 70 + 'ms';
+    io.observe(c);
+    setTimeout(() => { c.style.transitionDelay = ''; }, 1600);
+  });
+
+  // gentle 3D tilt following the pointer
+  if (!REDUCED){
+    grid.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('pointermove', e => {
+        if (e.pointerType === 'touch') return;
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width  - 0.5;
+        const py = (e.clientY - r.top)  / r.height - 0.5;
+        card.style.transform = 'perspective(850px) rotateX(' + (-py * 5).toFixed(2) +
+          'deg) rotateY(' + (px * 7).toFixed(2) + 'deg) translateY(-3px)';
+      });
+      card.addEventListener('pointerleave', () => { card.style.transform = ''; });
+    });
+  }
+  // placeholder "#" links shouldn't jump the page
+  grid.addEventListener('click', e => {
+    const a = e.target.closest('.card-link');
+    if (a && a.getAttribute('href') === '#') e.preventDefault();
+  });
+}
+
+/* --- nav background on scroll --- */
+addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', scrollY > 40);
+}, { passive:true });
+
+/* --- auto-crop math (tight frame around the character) --- */
+let U = null;
+function unionCrop(bb){
+  if (!U) U = { x0:bb.x0, y0:bb.y0, x1:bb.x1, y1:bb.y1 };
+  else {
+    U.x0 = Math.min(U.x0, bb.x0); U.y0 = Math.min(U.y0, bb.y0);
+    U.x1 = Math.max(U.x1, bb.x1); U.y1 = Math.max(U.y1, bb.y1);
+  }
+}
+function bboxOf(id){
+  const d = id.data, w = id.width, h = id.height;
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y += 2){
+    const row = y * w * 4;
+    for (let x = 0; x < w; x += 2){
+      if (d[row + x * 4 + 3] > 24){
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null;
+  return { x0:minX / w, y0:minY / h, x1:(maxX + 2) / w, y1:(maxY + 2) / h };
+}
+function finalizeCrop(){
+  if (!U) U = { x0:0.03, y0:0.02, x1:0.97, y1:0.98 };   // safe default
+  const PX = 0.025, PYT = 0.03, PYB = 0.06;             // small safety margins
+  const x = Math.max(0, U.x0 - PX), y = Math.max(0, U.y0 - PYT);
+  CROP = {
+    x: x, y: y,
+    w: Math.min(1, U.x1 + PX) - x,
+    h: Math.min(1, U.y1 + PYB) - y
+  };
+  if (CROP.w <= 0.05 || CROP.h <= 0.05) CROP = { x:0, y:0, w:1, h:1 };
+  const idle = layers[0];
+  vc.width  = Math.max(2, Math.round(CROP.w * idle.canvas.width));
+  vc.height = Math.max(2, Math.round(CROP.h * idle.canvas.height));
+}
+
+/* --- preload helpers --- */
+const delay = ms => new Promise(r => setTimeout(r, ms));
+function waitLoaded(v){
+  return new Promise(res => {
+    if (v.readyState >= 2 || v.error) return res();
+    const done = () => res();
+    v.addEventListener('loadeddata', done, { once:true });
+    v.addEventListener('error',      done, { once:true });
+    setTimeout(done, 3500);
+  });
+}
+const probeLayer = {
+  canvas: document.createElement('canvas'), ctx: null,
+  media:null, kind:'probe', full:false, keyed:false, waitingFrame:false, lastKeyTime:-1
+};
+probeLayer.ctx = probeLayer.canvas.getContext('2d', { willReadFrequently:true });
+
+/* probe one frame of a clip so no pose ever gets cropped off */
+function probe(v, t){
+  return new Promise(res => {
+    if (TAINTED || v.error || v.readyState < 2 || !isFinite(v.duration) || v.duration <= 0)
+      return res();
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      try {
+        const id = drawAndKey(probeLayer, v);
+        const bb = id && bboxOf(id);
+        if (bb && (bb.x1 - bb.x0) * (bb.y1 - bb.y0) < 0.92) unionCrop(bb);
+      } catch(e){}
+      res();
+    };
+    v.addEventListener('seeked', finish, { once:true });
+    setTimeout(finish, 900);
+    try { v.currentTime = Math.min(t, Math.max(0, v.duration - 0.3)); } catch(e){ finish(); }
+  });
+}
+
+/* --- mobile: say hi about 1s after load --- */
+let wantGreet = false;
+function maybeGreet(){
+  if (wantGreet && actorReady && TOUCH_PRIMARY && !REDUCED && targetKind === 'idle')
+    setTarget('center');
+}
+setTimeout(() => { wantGreet = true; maybeGreet(); }, 1000);
+if (TOUCH_PRIMARY) $('#hintText').textContent = 'Tap me to say hi \u2014 swipe for a surprise!';
+
+/* =====================================================================
+   INIT — load everything, measure, then reveal the scene
+   ===================================================================== */
+async function init(){
+  buildShapes();
+  buildProjects();
+
+  // 1) wait for the still image
+  await new Promise(res => {
+    if (idleImg.complete && (idleImg.naturalWidth || idleImg.error !== null)) return res();
+    idleImg.addEventListener('load',  res, { once:true });
+    idleImg.addEventListener('error', res, { once:true });
+    setTimeout(res, 4000);
+  });
+
+  if (idleImg.naturalWidth){
+    // 2) can we read pixels? (file:// pages in Chrome block this)
+    try {
+      const t = document.createElement('canvas');
+      const tc = t.getContext('2d', { willReadFrequently:true });
+      t.width = t.height = 2;
+      tc.drawImage(idleImg, 0, 0, 2, 2);
+      tc.getImageData(0, 0, 1, 1);
+    } catch(e){
+      TAINTED = true;
+      vc.classList.add('css-key');
+      notifyCard('Compatibility mode on',
+        'This browser blocks pixel access for pages opened straight from disk, so the green ' +
+        'screen runs in a softer built-in mode \u2014 everything still works. For the crispest ' +
+        'edges, view this page over http (e.g. run \u201cpython -m http.server\u201d in this ' +
+        'folder) or open it in Firefox.');
+    }
+
+    // 3) key the idle image and measure the character
+    const id = drawAndKey(layers[0], idleImg);
+    layers[0].media = idleImg; layers[0].kind = 'idle'; layers[0].keyed = true;
+    const bb = id && bboxOf(id);
+    if (bb) unionCrop(bb);
+  }
+
+  // 4) wait for the videos to have data (bounded)
+  await Promise.race([
+    Promise.all([waitLoaded(vids.left), waitLoaded(vids.right), waitLoaded(vids.center)]),
+    delay(4000)
+  ]);
+
+  // 5) probe a mid-pose frame of each clip (skipped in compat mode)
+  if (!TAINTED){
+    await Promise.race([
+      (async () => {
+        await probe(vids.left, 3.2);
+        await probe(vids.right, 3.2);
+        await probe(vids.center, 6.6);
+      })(),
+      delay(2600)
+    ]);
+  }
+  [vids.left, vids.right, vids.center].forEach(v => {
+    try { v.currentTime = 0; } catch(e){}
+  });
+
+  // 6) done — reveal
+  if (idleImg.naturalWidth){
+    finalizeCrop();
+    actorReady = true;
+  }
+  document.body.classList.add('ready');
+  maybeGreet();                                   // mobile auto-greeting
+  if (zonesOn && lastZone) setTarget(lastZone);   // zone picked during load
+}
+init();
+
+/* =====================================================================
+   MAIN LOOP — composite + motion, every frame
+   ===================================================================== */
+function frame(now){
+  requestAnimationFrame(frame);
+  updateMotion(now);
+  if (!actorReady || !heroVisible) return;
+
+  const F = layers[front];
+  keyLayer(F);
+
+  // fade only once the new clip actually has a frame (never a blank flash)
+  if (mix < 1 && !F.waitingFrame) mix = Math.min(1, (now - fadeStart) / FADE_MS);
+  const e = mix < 1 ? mix * mix * (3 - 2 * mix) : 1;   // smoothstep
+
+  vctx.clearRect(0, 0, vc.width, vc.height);
+  if (mix < 1) drawLayer(layers[1 - front], 1);
+  drawLayer(F, e);
+
+  updateBubble(F);
+}
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
