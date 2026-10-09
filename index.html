@@ -463,25 +463,6 @@ const FILES = {
   center: 'center.mp4'      // he notices you, waves, points down
 };
 
-/* Cursor behaviour
-   false = cursor makes him LOOK at it (head + eyes follow). Tap / swipe still play the clips.
-   true  = old behaviour (cursor position switches between left/center/right clips). */
-const CLIPS_ON_CURSOR = true;
-
-/* Head-follow tuning (try ?debug at the end of the URL to see the detected head area) */
-const LOOK = {
-  on:         true,
-  strength:   1,      // 0..2   overall power (1.4 = more dramatic, 0.7 = subtle)
-  headBottom: null,   // null = auto-detect chin/neck line, or 0.30..0.60 (fraction of body height)
-  eyeLine:    0.56,   // 0..1   where the eyes sit inside the head (0 = top of head)
-  turn:       0.060,  // how much the face features slide (the "head turn" feel)
-  shift:      0.025,  // how much the whole head slides
-  lean:       0.035,  // how much the head leans toward the cursor
-  eyes:       0.025,  // extra slide on the eye line (the "eyes follow" feel)
-  speed:      0.09    // seconds to catch up with the cursor (smaller = snappier)
-};
-const DEBUG = /[?&]debug/.test(location.search);
-
 /* Chroma key (green screen) tuning — safe ranges in comments */
 const GREEN_SENSITIVITY = 36;   // 10..120  higher = removes more green
 const EDGE_SOFTNESS     = 30;   // 1..80    higher = softer edges
@@ -663,12 +644,6 @@ function keyLayer(L){
 
 function drawLayer(L, alpha){
   if (alpha <= 0.002 || !L.canvas.width) return;
-  if (L.kind === 'idle' && rig.ok){               // live head-follow version of the idle pose
-    vctx.globalAlpha = alpha;
-    vctx.drawImage(rig.gc, 0, 0, vc.width, vc.height);
-    vctx.globalAlpha = 1;
-    return;
-  }
   const s = L.canvas;
   vctx.globalAlpha = alpha;
   if (L.full) vctx.drawImage(s, 0, 0, vc.width, vc.height);
@@ -676,169 +651,6 @@ function drawLayer(L, alpha){
     CROP.x * s.width, CROP.y * s.height, CROP.w * s.width, CROP.h * s.height,
     0, 0, vc.width, vc.height);
   vctx.globalAlpha = 1;
-}
-
-/* =====================================================================
-   HEAD-FOLLOW RIG — turns the still image into a live "looks at your cursor"
-   character using a small WebGL warp (head slides + leans, face turns, eyes shift)
-   ===================================================================== */
-const rig = { ok:false, gc:null, gl:null, u:{}, H:null, lx:0, ly:0, last:0 };
-
-function detectHead(img){
-  const d = img.data, w = img.width, h = img.height;
-  const mn = new Int16Array(h).fill(-1), mx = new Int16Array(h).fill(-1);
-  let top = -1, bot = -1;
-  for (let y = 0; y < h; y++){
-    let a = -1, b = -1; const row = y * w * 4;
-    for (let x = 0; x < w; x++){ if (d[row + x * 4 + 3] > 60){ if (a < 0) a = x; b = x; } }
-    mn[y] = a; mx[y] = b;
-    if (b - a >= 6){ if (top < 0) top = y; bot = y; }
-  }
-  if (top < 0) return null;
-  const Hc = bot - top + 1;
-  const wid = y => (mn[y] < 0 ? 0 : mx[y] - mn[y]);
-  let sum = 0, n = 0;
-  for (let y = top; y < top + 0.25 * Hc; y++) if (mn[y] >= 0){ sum += (mn[y] + mx[y]) / 2; n++; }
-  const cx = n ? sum / n : w / 2;
-  let headW = 0;
-  for (let y = Math.round(top + 0.10 * Hc); y < top + 0.35 * Hc; y++) headW = Math.max(headW, wid(y));
-  if (headW < 10) headW = w * 0.4;
-  let neck = top + (LOOK.headBottom || 0.42) * Hc;
-  if (!LOOK.headBottom){
-    for (let y = Math.round(top + 0.34 * Hc); y < top + 0.62 * Hc; y++){
-      if (wid(y) > 1.35 * headW){ neck = y - 0.03 * Hc; break; }   // shoulders start here
-    }
-  }
-  neck = Math.min(top + 0.60 * Hc, Math.max(top + 0.30 * Hc, neck));
-  const headH = neck - top;
-  return {
-    cx: cx, top: top, neck: neck, headW: headW, headH: headH,
-    faceY: top + LOOK.eyeLine * headH, eyeY: top + LOOK.eyeLine * headH,
-    rx: 0.27 * headW, ry: 0.34 * headH, eyeBand: 0.07 * headH, soft: 0.06 * Hc
-  };
-}
-
-function initRig(){
-  rig.ok = false;
-  if (!LOOK.on || REDUCED || TAINTED || !idleImg.naturalWidth) return;
-  try {
-    const src = document.createElement('canvas');
-    src.width = vc.width; src.height = vc.height;
-    const sctx = src.getContext('2d', { willReadFrequently:true });
-    const s0 = layers[0].canvas;
-    sctx.drawImage(s0, CROP.x * s0.width, CROP.y * s0.height, CROP.w * s0.width, CROP.h * s0.height,
-                   0, 0, src.width, src.height);
-    const H = detectHead(sctx.getImageData(0, 0, src.width, src.height));
-    if (!H) return;
-    rig.H = H;
-
-    const gc = document.createElement('canvas');
-    gc.width = src.width; gc.height = src.height;
-    const gl = gc.getContext('webgl', { premultipliedAlpha:true, alpha:true, antialias:false }) ||
-               gc.getContext('experimental-webgl', { premultipliedAlpha:true, alpha:true });
-    if (!gl) return;
-    const VS = 'attribute vec2 a;varying vec2 uv;void main(){uv=vec2(a.x*0.5+0.5,0.5-a.y*0.5);gl_Position=vec4(a,0.0,1.0);}';
-    const FS = [
-      '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-      'uniform sampler2D tex;uniform vec2 res;uniform vec2 look;',
-      'uniform vec4 hA;',   // cx, faceY, rx, ry
-      'uniform vec4 hB;',   // neckY, soft, headW, topY
-      'uniform vec4 hK;',   // shift, lean, turn, eyes
-      'uniform vec2 hE;',   // eyeY, eyeBand
-      'varying vec2 uv;',
-      'void main(){',
-      '  vec2 p = uv * res;',
-      '  float wy = 1.0 - smoothstep(hB.x - hB.y, hB.x + hB.y, p.y);',
-      '  float up = clamp((hB.x - p.y) / max(hB.x - hB.w, 1.0), 0.0, 1.0);',
-      '  vec2 d = vec2(0.0);',
-      '  d.x += look.x * hK.x * hB.z * wy;',
-      '  d.y += look.y * hK.x * 0.6 * hB.z * wy;',
-      '  d.x += look.x * hK.y * hB.z * up * wy;',
-      '  vec2 g = (p - hA.xy) / hA.zw;',
-      '  float b = exp(-dot(g, g));',
-      '  d.x += look.x * hK.z * hB.z * b;',
-      '  d.y += look.y * hK.z * 0.7 * hB.z * b;',
-      '  float e = (p.y - hE.x) / hE.y;',
-      '  float ex = (p.x - hA.x) / (hA.z * 1.3);',
-      '  d.x += look.x * hK.w * hB.z * exp(-e * e) * exp(-ex * ex);',
-      '  gl_FragColor = texture2D(tex, (p - d) / res);',
-      '}'
-    ].join('\n');
-    const mk = (type, code) => {
-      const sh = gl.createShader(type); gl.shaderSource(sh, code); gl.compileShader(sh);
-      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
-      return sh;
-    };
-    const pr = gl.createProgram();
-    gl.attachShader(pr, mk(gl.VERTEX_SHADER, VS));
-    gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, FS));
-    gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
-    gl.useProgram(pr);
-
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(pr, 'a');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-    const tex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);   // throws if pixels are locked
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-    const U = n => gl.getUniformLocation(pr, n);
-    rig.u = { look:U('look'), hA:U('hA'), hB:U('hB'), hK:U('hK'), hE:U('hE') };
-    gl.uniform1i(U('tex'), 0);
-    gl.uniform2f(U('res'), gc.width, gc.height);
-    gl.uniform4f(rig.u.hA, H.cx, H.faceY, H.rx, H.ry);
-    gl.uniform4f(rig.u.hB, H.neck, H.soft, H.headW, H.top);
-    const k = LOOK.strength;
-    gl.uniform4f(rig.u.hK, LOOK.shift * k, LOOK.lean * k, LOOK.turn * k, LOOK.eyes * k);
-    gl.uniform2f(rig.u.hE, H.eyeY, H.eyeBand);
-    gl.viewport(0, 0, gc.width, gc.height);
-    gl.clearColor(0, 0, 0, 0);
-
-    gc.addEventListener('webglcontextlost', e => { e.preventDefault(); rig.ok = false; });
-    rig.gc = gc; rig.gl = gl; rig.ok = true;
-    renderRig(performance.now());
-    if (DEBUG) console.log('[head-follow] detected', H);
-  } catch (err){
-    rig.ok = false;
-    console.warn('[head-follow] disabled:', err);
-  }
-}
-
-/* cursor -> gaze, eased; draws one warped frame into the offscreen GL canvas */
-function renderRig(now){
-  if (!rig.ok) return;
-  const H = rig.H, dt = Math.min(64, Math.max(1, now - (rig.last || now - 16)));
-  rig.last = now;
-  let tx = 0, ty = 0;
-  const rc = vc.getBoundingClientRect();
-  if (hasMouse && rc.width > 0){
-    const hx = rc.left + rc.width  * (H.cx    / vc.width);
-    const hy = rc.top  + rc.height * (H.faceY / vc.height);
-    tx = Math.tanh((mouseX - hx) / (innerWidth  * 0.28));
-    ty = Math.tanh((mouseY - hy) / (innerHeight * 0.28));
-  }
-  // slow curious wander when there is no pointer yet (or a finger has been away a while)
-  const away = TOUCH_PRIMARY ? Math.min(1, Math.max(0, (now - lastMoveT - 4000) / 2000)) : 0;
-  const wk = hasMouse ? away : 1;
-  tx = tx * (1 - wk) + Math.sin(now * 0.00055) * 0.35 * wk;
-  ty = ty * (1 - wk) + Math.cos(now * 0.00041) * 0.15 * wk;
-  const a = 1 - Math.exp(-dt / (LOOK.speed * 1000));
-  rig.lx += (tx - rig.lx) * a;
-  rig.ly += (ty - rig.ly) * a;
-  const gl = rig.gl;
-  gl.uniform2f(rig.u.look, rig.lx, rig.ly);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
 /* switch what the character is doing — always a perfect cross-fade */
@@ -924,8 +736,8 @@ function updateMotion(now){
   tx += (nx - tx) * 0.055; ty += (ny - ty) * 0.055;
   const bob = Math.sin(now * 0.0011) * 9;              // slow float
   actorTilt.style.transform =
-    'translateY(' + bob.toFixed(1) + 'px) rotateY(' + (tx * 2.5).toFixed(2) +
-    'deg) rotateX(' + (-ty * 2).toFixed(2) + 'deg)';
+    'translateY(' + bob.toFixed(1) + 'px) rotateY(' + (tx * 4.5).toFixed(2) +
+    'deg) rotateX(' + (-ty * 3).toFixed(2) + 'deg)';
   const bn = (bob + 9) / 18;                            // shadow reacts to the float
   actorShadow.style.transform = 'translateX(-50%) scaleX(' + (1.05 - bn * 0.12).toFixed(3) + ')';
   actorShadow.style.opacity  = (0.55 - bn * 0.2).toFixed(2);
@@ -934,7 +746,7 @@ function updateMotion(now){
 }
 
 /* --- desktop: three zones across the whole window --- */
-let zonesOn = CLIPS_ON_CURSOR && !TOUCH_PRIMARY;
+let zonesOn = !TOUCH_PRIMARY;
 let lastZone = null, pendZone = null, pendTimer = 0;
 
 function zoneOf(x){
@@ -945,14 +757,8 @@ function activate(z){
   if (z === 'left' || z === 'right' || z === 'center') setTarget(z);
   else if (targetKind === 'center') setTarget('idle');   // leaving center -> back to work
 }
-/* mouse AND finger both feed the head-follow */
-let lastMoveT = 0;
-['pointermove', 'pointerdown'].forEach(ev => window.addEventListener(ev, e => {
-  mouseX = e.clientX; mouseY = e.clientY; hasMouse = true; lastMoveT = performance.now();
-}, { passive:true }));
 window.addEventListener('mousemove', e => {
-  mouseX = e.clientX; mouseY = e.clientY; hasMouse = true; lastMoveT = performance.now();
-  if (!CLIPS_ON_CURSOR) return;                   // cursor only makes him look, no clip switching
+  mouseX = e.clientX; mouseY = e.clientY; hasMouse = true;
   if (!zonesOn){ if (!TOUCH_PRIMARY) zonesOn = true; else return; }
   const z = zoneOf(mouseX);
   if (z === pendZone) return;
@@ -1230,7 +1036,6 @@ async function init(){
   // 6) done — reveal
   if (idleImg.naturalWidth){
     finalizeCrop();
-    initRig();
     actorReady = true;
   }
   document.body.classList.add('ready');
@@ -1242,19 +1047,6 @@ init();
 /* =====================================================================
    MAIN LOOP — composite + motion, every frame
    ===================================================================== */
-let holdSince = 0, holdX = 0, holdY = 0;
-function drawDebug(){
-  const H = rig.H;
-  vctx.save();
-  vctx.strokeStyle = '#00e5ff'; vctx.lineWidth = 2;
-  vctx.beginPath();
-  vctx.moveTo(0, H.neck); vctx.lineTo(vc.width, H.neck);          // neck / chin line
-  vctx.moveTo(H.cx, H.top); vctx.lineTo(H.cx, H.neck);            // head centre
-  vctx.moveTo(H.cx - H.rx, H.eyeY); vctx.lineTo(H.cx + H.rx, H.eyeY);   // eye line
-  vctx.stroke();
-  vctx.beginPath(); vctx.ellipse(H.cx, H.faceY, H.rx, H.ry, 0, 0, Math.PI * 2); vctx.stroke();
-  vctx.restore();
-}
 function frame(now){
   requestAnimationFrame(frame);
   updateMotion(now);
@@ -1267,23 +1059,9 @@ function frame(now){
   if (mix < 1 && !F.waitingFrame) mix = Math.min(1, (now - fadeStart) / FADE_MS);
   const e = mix < 1 ? mix * mix * (3 - 2 * mix) : 1;   // smoothstep
 
-  if (rig.ok && F.kind === 'idle') renderRig(now);    // live head-follow frame
-
-  // after the greeting/point pose: go back to looking at you once he's been held a moment
-  if (targetKind === 'center'){
-    const v = vids.center;
-    const held = v.paused || v.ended || (isFinite(v.duration) && v.duration > 0 && v.currentTime > v.duration - 0.2);
-    if (held && mix >= 1){
-      if (!holdSince){ holdSince = now; holdX = mouseX; holdY = mouseY; }
-      const moved = Math.hypot(mouseX - holdX, mouseY - holdY) > 90;
-      if ((moved && now - holdSince > 1200) || now - holdSince > 7000) setTarget('idle');
-    } else holdSince = 0;
-  } else holdSince = 0;
-
   vctx.clearRect(0, 0, vc.width, vc.height);
   if (mix < 1) drawLayer(layers[1 - front], 1);
   drawLayer(F, e);
-  if (DEBUG && rig.ok && F.kind === 'idle') drawDebug();
 
   updateBubble(F);
 }
