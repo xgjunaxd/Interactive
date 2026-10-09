@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -455,12 +455,16 @@ body.ready .actor-hold{
    EASY-TO-EDIT SETTINGS — change things here, the rest adapts
    ===================================================================== */
 
+/* Debug overlay toggle */
+const DEBUG_MODE = true; 
+
 /* Media files — keep these in the SAME folder as index.html */
 const FILES = {
   idle:   'character.jpg',  // still image (working pose)
   left:   'left.mp4',       // he looks left
   right:  'right.mp4',      // he looks right
-  center: 'center.mp4'      // he notices you, waves, points down
+  center: 'center.mp4',     // he notices you, waves, points down
+  turn:   'turn.mp4'        // head-follow scrubbing mode
 };
 
 /* Chroma key (green screen) tuning — safe ranges in comments */
@@ -528,6 +532,14 @@ const bubble = $('#bubble'), bubbleTextEl = $('#bubbleText'), pointCue = $('#poi
 const shapesBack = $('#shapesBack'), shapesFront = $('#shapesFront');
 const stash = $('#stash'), notes = $('#notes'), grid = $('#projectGrid');
 
+/* Create debug overlay if enabled */
+let debugDiv = null;
+if (DEBUG_MODE) {
+  debugDiv = document.createElement('div');
+  debugDiv.style.cssText = 'position:fixed; top:10px; left:10px; z-index:9999; background:rgba(0,0,0,0.7); color:#0f0; padding:8px 12px; font-family:monospace; font-size:13px; border-radius:6px; pointer-events:none;';
+  document.body.appendChild(debugDiv);
+}
+
 /* --- friendly notices --- */
 const missing = new Set();
 let missingCard = null;
@@ -567,8 +579,15 @@ function makeVideo(key){
 const vids = {
   left:  makeVideo('left'),
   right: makeVideo('right'),
-  center:makeVideo('center')
+  center:makeVideo('center'),
+  turn:  makeVideo('turn')
 };
+
+/* Force frame redraw when turn.mp4 finishes seeking (scrubbing) */
+vids.turn.addEventListener('seeked', () => {
+  const F = layers[front];
+  if (F.kind === 'turn') F.lastKeyTime = -1; // -1 forces keyLayer() to process the new frame
+});
 const idleImg = new Image();
 idleImg.addEventListener('error', () => reportMissing(FILES.idle));
 idleImg.src = FILES.idle;
@@ -680,8 +699,16 @@ function setTarget(kind){
   if (F.waitingFrame){
     const v = F.media;
     try { v.currentTime = 0; } catch(e){}
-    const p = v.play();                            // start reliably, handle rejection
-    if (p && p.catch) p.catch(() => { F.needsGesture = true; });
+    
+    if (kind === 'turn') {
+      v.pause(); // Head-follow mode is scrubbed, never auto-played
+      if (isFinite(v.duration) && v.duration > 0) {
+        v.currentTime = Math.max(0, Math.min(1, mouseX / innerWidth)) * v.duration;
+      }
+    } else {
+      const p = v.play();                              // start reliably, handle rejection
+      if (p && p.catch) p.catch(() => { F.needsGesture = true; });
+    }
   }
   mix = 0;
   fadeStart = performance.now();
@@ -701,9 +728,10 @@ window.addEventListener('pointerdown', () => {
 vids.left .addEventListener('ended', () => { if (targetKind === 'left')  setTarget('idle'); });
 vids.right.addEventListener('ended', () => { if (targetKind === 'right') setTarget('idle'); });
 vids.center.addEventListener('ended', function(){
-  // safety: hold on the pointing pose, never past the last frame
-  if (targetKind === 'center' && isFinite(this.duration)){
-    try { this.currentTime = Math.max(0, this.duration - 0.2); } catch(e){}
+  // Switch to head-follow (turn) mode after the greeting finishes
+  if (targetKind === 'center') {
+    zonesOn = false; // Disable normal zone switching so scrubbing takes over
+    setTarget('turn');
   }
 });
 
@@ -759,6 +787,18 @@ function activate(z){
 }
 window.addEventListener('mousemove', e => {
   mouseX = e.clientX; mouseY = e.clientY; hasMouse = true;
+
+  // Scrubbing logic for turn.mp4
+  if (targetKind === 'turn') {
+    const v = vids.turn;
+    if (!v.paused) v.pause();
+    if (isFinite(v.duration) && v.duration > 0) {
+      const progress = Math.max(0, Math.min(1, mouseX / innerWidth));
+      v.currentTime = progress * v.duration;
+    }
+    return; // Skip normal left/right zone detection
+  }
+
   if (!zonesOn){ if (!TOUCH_PRIMARY) zonesOn = true; else return; }
   const z = zoneOf(mouseX);
   if (z === pendZone) return;
@@ -1012,9 +1052,9 @@ async function init(){
     if (bb) unionCrop(bb);
   }
 
-  // 4) wait for the videos to have data (bounded)
+ // 4) wait for the videos to have data (bounded)
   await Promise.race([
-    Promise.all([waitLoaded(vids.left), waitLoaded(vids.right), waitLoaded(vids.center)]),
+    Promise.all([waitLoaded(vids.left), waitLoaded(vids.right), waitLoaded(vids.center), waitLoaded(vids.turn)]),
     delay(4000)
   ]);
 
@@ -1025,11 +1065,14 @@ async function init(){
         await probe(vids.left, 3.2);
         await probe(vids.right, 3.2);
         await probe(vids.center, 6.6);
+        if (isFinite(vids.turn.duration) && vids.turn.duration > 0) {
+          await probe(vids.turn, vids.turn.duration * 0.5);
+        }
       })(),
-      delay(2600)
+      delay(3000)
     ]);
   }
-  [vids.left, vids.right, vids.center].forEach(v => {
+  [vids.left, vids.right, vids.center, vids.turn].forEach(v => {
     try { v.currentTime = 0; } catch(e){}
   });
 
@@ -1064,6 +1107,12 @@ function frame(now){
   drawLayer(F, e);
 
   updateBubble(F);
+
+// Update debug read-out
+  if (DEBUG_MODE && debugDiv) {
+    const t = (vids.turn && vids.turn.readyState >= 1) ? vids.turn.currentTime.toFixed(3) : '0.000';
+    debugDiv.textContent = `Mode: ${targetKind} | turn.mp4 time: ${t}s`;
+  }
 }
 requestAnimationFrame(frame);
 
